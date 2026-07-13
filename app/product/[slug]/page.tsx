@@ -1,0 +1,2 @@
+import { notFound } from "next/navigation"; import { ProductDetail } from "../../../components/store"; import { getProduct, getRelatedProducts } from "../../../lib/products";
+export default async function Product({params}:{params:Promise<{slug:string}>}){const p=await getProduct((await params).slug);if(!p)notFound();return <ProductDetail product={p} relatedProducts={await getRelatedProducts(p.category.id,p.id)}/>}

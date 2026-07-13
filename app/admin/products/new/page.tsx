@@ -1,0 +1,2 @@
+import Link from "next/link"; import { requireAdmin } from "../../../../lib/admin-auth"; import { ProductForm } from "../../../../components/admin/product-form";
+export default async function NewProduct(){const {db}=await requireAdmin();const {data:categories}=await db.from("categories").select("id,name").order("name");return <main className="admin"><Link href="/admin/products">← Products</Link><p className="eyebrow">CATALOGUE</p><h1>Add product</h1><ProductForm categories={categories||[]}/></main>}

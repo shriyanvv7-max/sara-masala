@@ -1,0 +1,2 @@
+import { requireAdmin } from "../../../lib/admin-auth"; import { InventoryEditor } from "../../../components/admin/inventory-editor";
+export default async function Inventory(){const {db}=await requireAdmin();const {data}=await db.from("product_variants").select("id,weight,price,stock,sku,products(name)").order("stock");return <main className="admin"><p className="eyebrow">OPERATIONS</p><h1>Inventory</h1><InventoryEditor initial={(data||[]) as any}/></main>}
