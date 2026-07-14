@@ -7,6 +7,7 @@ import { PrimaryButton, SecondaryButton } from "../ui/buttons";
 import { SectionHeading } from "../ui/section-heading";
 import { useCart } from "../cart-provider";
 import type { Product } from "../../lib/products";
+import { PublicLogo } from "../ui/public-logo";
 
 const categories = [
   ["Spice Powders", "Everyday essentials, freshly ground", "/images/references/whole-spices.jpg"],
@@ -25,7 +26,7 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
   useEffect(() => { const f = () => setScrolled(scrollY > 30); addEventListener("scroll", f); return () => removeEventListener("scroll", f); }, []);
   return <main>
     <nav className={`nav ${scrolled ? "nav-solid" : ""}`}>
-      <a href="#top" className="brand"><span>Sara</span><small>MASALA</small></a>
+      <PublicLogo className="brand public-header-logo" imageClassName="public-logo-image" priority />
       <div className="navlinks">{[["Home","/"],["Shop","/shop"],["Recipes","/recipes"],["Our Story","/about"],["Contact","/contact"]].map(([x,href]) => <a key={x} href={href}>{x}</a>)}</div>
       <div className="navactions"><Search size={20}/><a className="cart-link" href="/cart" aria-label="Cart"><ShoppingBag size={20}/>{count>0&&<b>{count}</b>}</a><button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Menu">{open ? <X/> : <Menu/>}</button><a href="/shop" className="nav-cta">Shop now</a></div>
       {open && <div className="mobile-links">{[["Home","/"],["Shop","/shop"],["Recipes","/recipes"],["Our Story","/about"],["Contact","/contact"]].map(([x,href]) => <a onClick={() => setOpen(false)} key={x} href={href}>{x}</a>)}</div>}
@@ -48,7 +49,7 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
     </section>
 
     <section className="products section" id="products"><SectionHeading eyebrow="THE SARA PANTRY" title="Made for everyday magic"/>
-      <div className="product-grid">{featuredProducts.map(product => { const variant=product.variants[0]; if(!variant)return null; return <motion.article whileHover={{y:-7}} className="product-card" key={product.id}><button className="wish" aria-label={`Add ${product.name} to wish list`}><Heart size={17}/></button><a href={`/product/${product.slug}`} className="pack" style={{background:product.color}}>{product.image?<img className="pack-image" src={product.image} alt=""/>:<img className="product-logo" src="/images/sara-logo.jpg" alt="Sara Masala"/>}<b>{product.name}</b><i>Just Like Paati Made It</i></a><div className="product-copy"><p>{product.category.name}</p><h3>{product.name}</h3><div><strong>₹{variant.price}</strong><span>{variant.weight}</span></div><a href={`/product/${product.slug}`} className="quick-add">View product <b>→</b></a></div></motion.article> })}</div>
+      <div className="product-grid">{featuredProducts.map(product => { const variant=product.variants[0]; if(!variant)return null; return <motion.article whileHover={{y:-7}} className="product-card" key={product.id}><button className="wish" aria-label={`Add ${product.name} to wish list`}><Heart size={17}/></button><a href={`/product/${product.slug}`} className="pack" style={{background:product.color}}>{product.image?<img className="pack-image" src={product.image} alt=""/>:<PublicLogo linked={false} imageClassName="product-logo"/>}<b>{product.name}</b><i>Just Like Paati Made It</i></a><div className="product-copy"><p>{product.category.name}</p><h3>{product.name}</h3><div><strong>₹{variant.price}</strong><span>{variant.weight}</span></div><a href={`/product/${product.slug}`} className="quick-add">View product <b>→</b></a></div></motion.article> })}</div>
       <div className="center"><SecondaryButton href="/shop">View all products</SecondaryButton></div>
     </section>
 
@@ -62,6 +63,6 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
 
     <section className="instagram section"><SectionHeading eyebrow="FOLLOW ALONG" title="A little everyday deliciousness" body="@sara.masala_co · Share your Sara table with us"/><div className="insta-grid">{["/images/references/chettinad-curry.jpg","/images/references/sambar.jpg","/images/references/whole-spices.jpg","/images/references/chilli-dabba.jpg","/images/references/chettinad-curry.jpg"].map((src,i) => <a key={`${src}-${i}`} href="https://www.instagram.com/sara.masala_co/?hl=en" target="_blank" rel="noreferrer" className="insta"><img src={src} alt={`Sara Masala inspiration ${i+1}`}/><Instagram/></a>)}</div></section>
 
-    <footer id="contact"><div className="footer-top"><div><img className="official-logo" src="/images/sara-logo.jpg" alt="Sara Masala logo"/><p>Small-batch spices<br/>with a whole lot of heart.</p></div><div><h4>EXPLORE</h4><a href="/shop">Shop all</a><a href="/recipes">Recipes</a><a href="/about">Our story</a></div><div><h4>KEEP IN TOUCH</h4><p>For masala stories, fresh recipes<br/>and a little kitchen magic.</p><div className="email"><input aria-label="Email address" placeholder="Your email address"/><button aria-label="Subscribe">→</button></div></div></div><div className="footer-bottom"><span>© 2026 SARA MASALA</span><span>MADE WITH ♥ IN MYSURU</span><a href="https://www.instagram.com/sara.masala_co/?hl=en" target="_blank" rel="noreferrer">@SARA.MASALA_CO</a></div></footer>
+    <footer id="contact"><div className="footer-top"><div><PublicLogo className="official-logo" imageClassName="footer-logo-image"/><p>Small-batch spices<br/>with a whole lot of heart.</p></div><div><h4>EXPLORE</h4><a href="/shop">Shop all</a><a href="/recipes">Recipes</a><a href="/about">Our story</a></div><div><h4>KEEP IN TOUCH</h4><p>For masala stories, fresh recipes<br/>and a little kitchen magic.</p><div className="email"><input aria-label="Email address" placeholder="Your email address"/><button aria-label="Subscribe">→</button></div></div></div><div className="footer-bottom"><span>© 2026 SARA MASALA</span><span>MADE WITH ♥ IN MYSURU</span><a href="https://www.instagram.com/sara.masala_co/?hl=en" target="_blank" rel="noreferrer">@SARA.MASALA_CO</a></div></footer>
   </main>;
 }
