@@ -28,7 +28,7 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
       <a href="#top" className="brand"><span>Sara</span><small>MASALA</small></a>
       <div className="navlinks">{[["Home","/"],["Shop","/shop"],["Recipes","/recipes"],["Our Story","/about"],["Contact","/contact"]].map(([x,href]) => <a key={x} href={href}>{x}</a>)}</div>
       <div className="navactions"><Search size={20}/><a className="cart-link" href="/cart" aria-label="Cart"><ShoppingBag size={20}/>{count>0&&<b>{count}</b>}</a><button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Menu">{open ? <X/> : <Menu/>}</button><a href="/shop" className="nav-cta">Shop now</a></div>
-      {open && <div className="mobile-links">{["Home", "Shop", "Recipes", "Our Story", "Contact"].map(x => <a onClick={() => setOpen(false)} key={x} href="#shop">{x}</a>)}</div>}
+      {open && <div className="mobile-links">{[["Home","/"],["Shop","/shop"],["Recipes","/recipes"],["Our Story","/about"],["Contact","/contact"]].map(([x,href]) => <a onClick={() => setOpen(false)} key={x} href={href}>{x}</a>)}</div>}
     </nav>
 
     <section className="hero" id="top">
@@ -37,7 +37,7 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
         <p className="hero-kicker">SMALL-BATCH SOUTH INDIAN GOODNESS</p>
         <h1>Just Like<br/><em>Paati Made It.</em></h1>
         <p>Traditional recipes crafted with authentic ingredients and freshly ground spices.</p>
-        <div className="hero-buttons"><PrimaryButton>Shop the collection</PrimaryButton><SecondaryButton>Explore recipes</SecondaryButton></div>
+        <div className="hero-buttons"><PrimaryButton href="/shop">Shop the collection</PrimaryButton><SecondaryButton href="/recipes">Explore recipes</SecondaryButton></div>
       </motion.div>
       <div className="hero-badges"><span>NO PRESERVATIVES</span><i/><span>FRESHLY GROUND</span><i/><span>SMALL BATCH</span></div>
       <div className="spice spice-one">✦</div><div className="spice spice-two">✳</div>
@@ -49,14 +49,14 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
 
     <section className="products section" id="products"><SectionHeading eyebrow="THE SARA PANTRY" title="Made for everyday magic"/>
       <div className="product-grid">{featuredProducts.map(product => { const variant=product.variants[0]; if(!variant)return null; return <motion.article whileHover={{y:-7}} className="product-card" key={product.id}><button className="wish" aria-label={`Add ${product.name} to wish list`}><Heart size={17}/></button><a href={`/product/${product.slug}`} className="pack" style={{background:product.color}}>{product.image?<img className="pack-image" src={product.image} alt=""/>:<img className="product-logo" src="/images/sara-logo.jpg" alt="Sara Masala"/>}<b>{product.name}</b><i>Just Like Paati Made It</i></a><div className="product-copy"><p>{product.category.name}</p><h3>{product.name}</h3><div><strong>₹{variant.price}</strong><span>{variant.weight}</span></div><a href={`/product/${product.slug}`} className="quick-add">View product <b>→</b></a></div></motion.article> })}</div>
-      <div className="center"><SecondaryButton>View all products</SecondaryButton></div>
+      <div className="center"><SecondaryButton href="/shop">View all products</SecondaryButton></div>
     </section>
 
     <section className="promise"><div className="promise-intro"><p className="eyebrow">OUR PROMISE</p><h2>Nothing to hide.<br/>Everything to savour.</h2></div><div className="promise-grid">{[["01","Traditional recipes","Built on family know-how, not shortcuts."],["02","Freshly ground","For the fragrance that makes a kitchen feel like home."],["03","No preservatives","Only honest ingredients, handled with care."],["04","Authentic ingredients","Sourced for flavour, never just convenience."]].map(([num,title,copy]) => <div className="promise-card" key={title}><span>{num}</span><h3>{title}</h3><p>{copy}</p></div>)}</div></section>
 
-    <section className="story section" id="our-story"><div className="story-photo"><img src="/images/references/whole-spices.jpg" alt="A colourful collection of whole Indian spices"/><span>EST. 2026<br/>MYSURU</span></div><div className="story-copy"><p className="eyebrow">FROM OUR KITCHEN</p><h2>Made with memories,<br/><em>shared with love.</em></h2><p>At Sara, every blend begins with a memory of home: the dry roast before dawn, the unmistakable scent of curry leaves, and Paati's instinct for the perfect pinch.</p><p>We honour those rituals in small batches, so every meal feels a little more like it was made for you.</p><a href="#" className="text-link">Meet the family behind Sara <b>→</b></a></div></section>
+    <section className="story section" id="our-story"><div className="story-photo"><img src="/images/references/whole-spices.jpg" alt="A colourful collection of whole Indian spices"/><span>EST. 2026<br/>MYSURU</span></div><div className="story-copy"><p className="eyebrow">FROM OUR KITCHEN</p><h2>Made with memories,<br/><em>shared with love.</em></h2><p>At Sara, every blend begins with a memory of home: the dry roast before dawn, the unmistakable scent of curry leaves, and Paati's instinct for the perfect pinch.</p><p>We honour those rituals in small batches, so every meal feels a little more like it was made for you.</p><a href="/about" className="text-link">Meet the family behind Sara <b>→</b></a></div></section>
 
-    <section className="recipes section" id="recipes"><SectionHeading eyebrow="FROM THE SARA TABLE" title="Cook something memorable"/><div className="recipe-grid">{recipes.map(([name,time,img]) => <motion.article whileHover={{y:-6}} className="recipe-card" key={name}><img src={img} alt={name}/><div><span>RECIPE · {time}</span><h3>{name}</h3><a href="#">View recipe <b>→</b></a></div></motion.article>)}</div><div className="center"><PrimaryButton>Cook with Sara</PrimaryButton></div></section>
+    <section className="recipes section" id="recipes"><SectionHeading eyebrow="FROM THE SARA TABLE" title="Cook something memorable"/><div className="recipe-grid">{recipes.map(([name,time,img]) => <motion.article whileHover={{y:-6}} className="recipe-card" key={name}><img src={img} alt={name}/><div><span>RECIPE · {time}</span><h3>{name}</h3><a href="/recipes">View recipe <b>→</b></a></div></motion.article>)}</div><div className="center"><PrimaryButton href="/recipes">Cook with Sara</PrimaryButton></div></section>
 
     <section className="quote"><span>“</span><blockquote>It smells exactly like the powder my grandmother made - warm, fresh, and somehow full of love.</blockquote><div className="stars">★★★★★</div><p>MEERA R. · CHENNAI</p></section>
 
