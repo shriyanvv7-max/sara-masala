@@ -8,6 +8,7 @@ import { SectionHeading } from "../ui/section-heading";
 import { useCart } from "../cart-provider";
 import type { Product } from "../../lib/products";
 import { PublicLogo } from "../ui/public-logo";
+import { GrandmotherIllustration } from "../ui/grandmother-illustration";
 
 const categories = [
   ["Spice Powders", "Everyday essentials, freshly ground", "/images/references/whole-spices.jpg"],
@@ -49,7 +50,7 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
     </section>
 
     <section className="products section" id="products"><SectionHeading eyebrow="THE SARA PANTRY" title="Made for everyday magic"/>
-      <div className="product-grid">{featuredProducts.map(product => { const variant=product.variants[0]; if(!variant)return null; return <motion.article whileHover={{y:-7}} className="product-card" key={product.id}><button className="wish" aria-label={`Add ${product.name} to wish list`}><Heart size={17}/></button><a href={`/product/${product.slug}`} className="pack" style={{background:product.color}}>{product.image?<img className="pack-image" src={product.image} alt=""/>:<PublicLogo linked={false} imageClassName="product-logo"/>}<b>{product.name}</b><i>Just Like Paati Made It</i></a><div className="product-copy"><p>{product.category.name}</p><h3>{product.name}</h3><div><strong>₹{variant.price}</strong><span>{variant.weight}</span></div><a href={`/product/${product.slug}`} className="quick-add">View product <b>→</b></a></div></motion.article> })}</div>
+      <div className="product-grid">{featuredProducts.map(product => { const variant=product.variants[0]; if(!variant)return null; return <motion.article whileHover={{y:-7}} className="product-card" key={product.id}><button className="wish" aria-label={`Add ${product.name} to wish list`}><Heart size={17}/></button><a href={`/product/${product.slug}`} className="pack" style={{background:product.color}}><GrandmotherIllustration color={product.color}/><div className="pack-content">{product.image?<img className="pack-image" src={product.image} alt=""/>:<PublicLogo linked={false} imageClassName="product-logo"/>}<b>{product.name}</b><i>Just Like Paati Made It</i></div></a><div className="product-copy"><p>{product.category.name}</p><h3>{product.name}</h3><div><strong>₹{variant.price}</strong><span>{variant.weight}</span></div><a href={`/product/${product.slug}`} className="quick-add">View product <b>→</b></a></div></motion.article> })}</div>
       <div className="center"><SecondaryButton href="/shop">View all products</SecondaryButton></div>
     </section>
 
