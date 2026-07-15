@@ -42,7 +42,6 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
         <div className="hero-buttons"><PrimaryButton href="/shop">Shop the collection</PrimaryButton><SecondaryButton href="/recipes">Explore recipes</SecondaryButton></div>
       </motion.div>
       <div className="hero-badges"><span>NO PRESERVATIVES</span><i/><span>FRESHLY GROUND</span><i/><span>SMALL BATCH</span></div>
-      <div className="spice spice-one">✦</div><div className="spice spice-two">✳</div>
     </section>
 
     <section className="categories section" id="shop"><SectionHeading eyebrow="SHOP BY MOOD" title="A spice for every story" body="From the dishes you grew up with to new favourites waiting to happen."/>
