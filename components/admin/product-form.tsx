@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
-import { productSchema, variantSchema } from "../../lib/validations";
+import { productSchema, variantSchemaBase } from "../../lib/validations";
 
-const schema = z.object({ product: productSchema, variants: z.array(variantSchema.extend({ id: z.string().optional() })).min(1) });
+const schema = z.object({ product: productSchema, variants: z.array(variantSchemaBase.extend({ id: z.string().optional() }).refine(data => data.mrp >= data.price, { message: "MRP must be at least the selling price.", path: ["mrp"] })).min(1) });
 type Values = z.infer<typeof schema>;
 type Category = { id: string; name: string };
 
@@ -24,7 +24,7 @@ export function ProductForm({ categories, initial }: { categories: Category[]; i
         storage: initial?.storage || "Store airtight in a cool, dry place.", category_id: initial?.category_id || categories[0]?.id || "",
         image: initial?.image || null, featured: initial?.featured || false, best_seller: initial?.best_seller || false,
       },
-      variants: initial?.product_variants?.map((variant: any) => ({ id: variant.id, weight: variant.weight, price: variant.price, stock: variant.stock, sku: variant.sku, active: variant.active })) || [{ weight: "125g", price: 90, stock: 20, sku: "", active: true }],
+      variants: initial?.product_variants?.map((variant: any) => ({ id: variant.id, weight: variant.weight, price: variant.price, mrp: variant.mrp ?? variant.price, stock: variant.stock, sku: variant.sku, active: variant.active })) || [{ weight: "125g", price: 90, mrp: 90, stock: 20, sku: "", active: true }],
     },
   });
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "variants" });
@@ -88,7 +88,7 @@ export function ProductForm({ categories, initial }: { categories: Category[]; i
       {image && <div className="admin-image-actions"><img className="admin-image" src={image} alt="Product preview"/><button type="button" className="admin-remove-image" onClick={removeImage} disabled={removingImage}>{removingImage ? "Removing..." : "Remove image"}</button></div>}
       <label><input type="checkbox" {...form.register("product.featured")}/> Featured product</label><label><input type="checkbox" {...form.register("product.best_seller")}/> Best seller</label>
     </section>
-    <section><h2>Weight variants</h2>{fields.map((field, index) => <div className="variant-row" key={field.id}><input placeholder="Weight" {...form.register(`variants.${index}.weight`)}/><input type="number" placeholder="Price" {...form.register(`variants.${index}.price`)}/><input type="number" placeholder="Stock" {...form.register(`variants.${index}.stock`)}/><input placeholder="SKU" {...form.register(`variants.${index}.sku`)}/><button type="button" onClick={() => field.id && initial?.product_variants?.[index]?.id ? deleteVariant(initial.product_variants[index].id, index) : remove(index)}>Remove</button></div>)}<button type="button" className="secondary admin-add" onClick={() => append({ weight: "", price: 0, stock: 0, sku: "", active: true })}>Add variant</button></section>
+    <section><h2>Weight variants</h2>{fields.map((field, index) => <div className="variant-row" key={field.id}><input placeholder="Weight" {...form.register(`variants.${index}.weight`)}/><input type="number" placeholder="Selling price" {...form.register(`variants.${index}.price`)}/><input type="number" placeholder="MRP" {...form.register(`variants.${index}.mrp`)}/><input type="number" placeholder="Stock" {...form.register(`variants.${index}.stock`)}/><input placeholder="SKU" {...form.register(`variants.${index}.sku`)}/><button type="button" onClick={() => field.id && initial?.product_variants?.[index]?.id ? deleteVariant(initial.product_variants[index].id, index) : remove(index)}>Remove</button></div>)}<button type="button" className="secondary admin-add" onClick={() => append({ weight: "", price: 0, mrp: 0, stock: 0, sku: "", active: true })}>Add variant</button></section>
     {message && <p role="alert">{message}</p>}<button className="add-cart" disabled={saving}>{saving ? "Saving..." : "Save changes"}</button>{initial && <button type="button" className="admin-delete" onClick={deleteProduct}>Delete product</button>}
   </form>;
 }
