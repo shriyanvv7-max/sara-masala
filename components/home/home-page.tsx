@@ -29,7 +29,7 @@ export function HomePage({ featuredProducts }: { featuredProducts: Product[] }) 
     <nav className={`nav ${scrolled ? "nav-solid" : ""}`}>
       <PublicLogo className="brand public-header-logo" imageClassName="public-logo-image" priority />
       <div className="navlinks">{[["Home","/"],["Shop","/shop"],["Recipes","/recipes"],["Our Story","/about"],["Contact","/contact"]].map(([x,href]) => <a key={x} href={href}>{x}</a>)}</div>
-      <div className="navactions"><Search size={20}/><a className="cart-link" href="/cart" aria-label="Cart"><ShoppingBag size={20}/>{count>0&&<b>{count}</b>}</a><button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Menu">{open ? <X/> : <Menu/>}</button><a href="/shop" className="nav-cta">Shop now</a></div>
+      <div className="navactions"><Search size={20}/><a className="cart-link" href="/cart" aria-label={`Cart with ${count} items`}><ShoppingBag size={20}/>{count>0&&<b key={count}>{count}</b>}</a><button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Menu">{open ? <X/> : <Menu/>}</button><a href="/shop" className="nav-cta">Shop now</a></div>
       {open && <div className="mobile-links">{[["Home","/"],["Shop","/shop"],["Recipes","/recipes"],["Our Story","/about"],["Contact","/contact"]].map(([x,href]) => <a onClick={() => setOpen(false)} key={x} href={href}>{x}</a>)}</div>}
     </nav>
 
