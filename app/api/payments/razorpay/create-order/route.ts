@@ -1,20 +1,52 @@
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
-import { createClient } from "../../../../../lib/supabase/server";
-import { supabaseAdmin } from "../../../../../lib/supabase/admin";
+import { z } from "zod";
 import { checkoutSchema } from "../../../../../lib/validations";
-import { calculateShipping, shippingConfig } from "../../../../../lib/commerce";
-import { getRazorpay } from "../../../../../lib/razorpay";
+import { calculateShipping } from "../../../../../lib/commerce";
+import { getRazorpay, getRazorpayConfig } from "../../../../../lib/razorpay";
+import { supabaseAdmin } from "../../../../../lib/supabase/admin";
+import { paymentError } from "../../../../../lib/payment-security";
 export const runtime = "nodejs";
-
 export async function POST(request: Request) {
-  const parsed=checkoutSchema.safeParse(await request.json()); if(!parsed.success) return NextResponse.json({error:"Please check your checkout details."},{status:400});
-  const auth=await createClient(); const {data:{user}}=await auth.auth.getUser(); const db=supabaseAdmin(); const ids=parsed.data.items.map(item=>item.variant_id);
-  const {data:variants,error}=await db.from("product_variants").select("id,weight,price,stock,sku,active,products(id,name,slug)").in("id",ids); if(error||!variants||variants.length!==ids.length)return NextResponse.json({error:"One or more products are no longer available."},{status:409});
-  let subtotal=0; const snapshots=[] as any[];
-  for(const item of parsed.data.items){const variant:any=variants.find((entry:any)=>entry.id===item.variant_id); if(!variant?.active||variant.stock<item.quantity)return NextResponse.json({error:`${variant?.products?.name||"A product"} does not have enough stock.`},{status:409}); const unit=Number(variant.price); const line=unit*item.quantity; subtotal+=line; snapshots.push({variant_id:variant.id,product_id:variant.products.id,product_name:variant.products.name,weight:variant.weight,sku:variant.sku,quantity:item.quantity,price:unit,unit_price:unit,line_total:line});}
-  const shipping=calculateShipping(subtotal); const total=subtotal+shipping; const orderNumber=`SM-${new Date().getFullYear()}-${randomUUID().slice(0,8).toUpperCase()}`;
-  const {data:order,error:orderError}=await db.from("orders").insert({order_number:orderNumber,customer_id:user?.id||null,customer_name:parsed.data.customer.name,customer_email:parsed.data.customer.email,customer_phone:parsed.data.customer.phone,shipping_address:parsed.data.address,status:"pending",payment_status:"pending",payment_method:"razorpay",currency:shippingConfig.currency,subtotal,shipping,discount:0,total}).select("id,order_number,confirmation_token").single(); if(orderError||!order)return NextResponse.json({error:"Unable to prepare your order."},{status:500});
-  const {error:itemError}=await db.from("order_items").insert(snapshots.map(item=>({...item,order_id:order.id}))); if(itemError){await db.from("orders").delete().eq("id",order.id);return NextResponse.json({error:"Unable to prepare order items."},{status:500});}
-  try { const razorOrder=await getRazorpay().orders.create({amount:Math.round(total*100),currency:"INR",receipt:orderNumber,notes:{internal_order_id:order.id}}); await db.from("orders").update({razorpay_order_id:razorOrder.id}).eq("id",order.id); return NextResponse.json({internalOrderId:order.id,orderNumber,confirmationToken:order.confirmation_token,razorpayOrderId:razorOrder.id,amount:razorOrder.amount,currency:"INR",key:process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,customer:parsed.data.customer}); } catch(error) { await db.from("orders").update({payment_status:"failed"}).eq("id",order.id); console.error("Razorpay create order failed",error); return NextResponse.json({error:"Unable to start payment. Please try again."},{status:502}); }
+  const parsed = checkoutSchema.extend({ requestId: z.string().uuid() }).safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return paymentError(400, "Please check your checkout details and cart.");
+  const input = parsed.data;
+  if (new Set(input.items.map(i => i.variant_id)).size !== input.items.length || input.items.length > 100) return paymentError(400, "Please refresh your cart.");
+  if (input.coupon_code) return paymentError(400, "This coupon is unavailable.");
+  try {
+    const config = getRazorpayConfig(); const razorpay = getRazorpay(); const db = supabaseAdmin();
+    const fingerprint = createHash("sha256").update(JSON.stringify({ ...input, requestId: undefined })).digest("hex");
+    const { data: existing, error: lookupError } = await db.from("orders").select("*").eq("checkout_request_id", input.requestId).maybeSingle();
+    if (lookupError) throw lookupError;
+    const response = (o: any) => NextResponse.json({ internalOrderId: o.id, orderNumber: o.order_number, confirmationToken: o.confirmation_token, razorpayOrderId: o.razorpay_order_id, amount: Math.round(Number(o.total) * 100), currency: "INR", key: config.keyId, testMode: config.keyId.startsWith("rzp_test_"), customer: input.customer });
+    if (existing) {
+      if (existing.checkout_fingerprint !== fingerprint) return paymentError(409, "Checkout details changed. Please start a new checkout.");
+      if (existing.razorpay_order_id) return response(existing);
+      return paymentError(409, "Your payment request is being prepared. Retry shortly; do not create a second payment.");
+    }
+    const { data: variants, error } = await db.from("product_variants").select("id,price,stock,active").in("id", input.items.map(i => i.variant_id));
+    if (error) throw error;
+    let subtotalPaise = 0;
+    for (const item of input.items) {
+      const v = variants?.find(v => v.id === item.variant_id);
+      if (!v?.active || v.stock < item.quantity) return paymentError(409, "A product is unavailable or has insufficient stock. Please review your cart.");
+      subtotalPaise += Math.round(Number(v.price) * 100) * item.quantity;
+    }
+    const shipping = calculateShipping(subtotalPaise / 100);
+    const { data: order, error: prepareError } = await db.rpc("prepare_razorpay_order", { p_request_id: input.requestId, p_fingerprint: fingerprint, p_customer: input.customer, p_address: input.address, p_items: input.items, p_shipping: shipping, p_expected_subtotal: subtotalPaise / 100 });
+    if (prepareError) {
+      console.error("[payment:create] prepare_razorpay_order failed", {
+        code: prepareError.code,
+        message: prepareError.message,
+        details: prepareError.details,
+        hint: prepareError.hint,
+      });
+
+      return paymentError(409, "Prices or availability changed. Please refresh your cart and retry.");
+    }
+    const remote = await razorpay.orders.create({ amount: Math.round(Number(order.total) * 100), currency: "INR", receipt: order.order_number, notes: { internal_order_id: order.id } });
+    const { error: saveError } = await db.from("orders").update({ razorpay_order_id: remote.id }).eq("id", order.id);
+    if (saveError) throw saveError;
+    return response({ ...order, razorpay_order_id: remote.id });
+  } catch { console.error("[payment:create] Configuration, database or provider failure"); return paymentError(); }
 }
