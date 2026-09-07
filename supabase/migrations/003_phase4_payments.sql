@@ -13,6 +13,7 @@ alter table public.order_items add column if not exists product_id uuid referenc
 create table if not exists public.payment_events (id uuid primary key default gen_random_uuid(), provider text not null, provider_event_id text not null unique, event_type text not null, payload jsonb not null, processed_at timestamptz, created_at timestamptz not null default now());
 create index if not exists payment_events_provider_idx on public.payment_events(provider,event_type);
 alter table public.payment_events enable row level security;
+drop policy if exists "Admins view payment events" on public.payment_events;
 create policy "Admins view payment events" on public.payment_events for select using (public.is_admin());
 
 create or replace function public.confirm_razorpay_payment(p_order_id uuid, p_razorpay_order_id text, p_payment_id text, p_signature text) returns text language plpgsql security definer set search_path=public as $$
@@ -34,3 +35,5 @@ begin
  return order_row.order_number;
 end; $$;
 revoke all on function public.confirm_razorpay_payment(uuid,text,text,text) from public;
+revoke all on function public.confirm_razorpay_payment(uuid,text,text,text) from anon,authenticated;
+grant execute on function public.confirm_razorpay_payment(uuid,text,text,text) to service_role;

@@ -7,6 +7,7 @@ import type { Product } from "../lib/products";
 
 export type CartItem = {
   product: Product;
+  variant_id: string | null;
   weight: string;
   quantity: number;
   price: number;
@@ -26,13 +27,43 @@ type CartNotice = { id: number; message: string };
 
 const CartContext = createContext<Cart | null>(null);
 
+function restoreCart(rawCart: string | null): CartItem[] {
+  try {
+    const stored: unknown = JSON.parse(rawCart || "[]");
+    if (!Array.isArray(stored)) return [];
+
+    return stored.flatMap((value): CartItem[] => {
+      if (!value || typeof value !== "object") return [];
+      const item = value as Partial<CartItem>;
+      if (
+        !item.product ||
+        !Array.isArray(item.product.variants) ||
+        typeof item.weight !== "string" ||
+        typeof item.quantity !== "number" ||
+        typeof item.price !== "number"
+      ) return [];
+
+      const matchingVariant = item.product.variants.find(variant => variant.weight === item.weight);
+      return [{
+        product: item.product,
+        variant_id: typeof item.variant_id === "string" ? item.variant_id : matchingVariant?.id ?? null,
+        weight: item.weight,
+        quantity: item.quantity,
+        price: item.price,
+      }];
+    });
+  } catch {
+    return [];
+  }
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState<CartNotice | null>(null);
 
   useEffect(() => {
-    setItems(JSON.parse(localStorage.getItem("sara-cart") || "[]"));
+    setItems(restoreCart(localStorage.getItem("sara-cart")));
     setReady(true);
   }, []);
 
@@ -51,12 +82,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     count: items.reduce((total, item) => total + item.quantity, 0),
     total: items.reduce((total, item) => total + item.price * item.quantity, 0),
     add(product, weight, quantity = 1) {
-      const price = product.variants.find(variant => variant.weight === weight)?.price || 0;
+      const variant = product.variants.find(candidate => candidate.weight === weight);
+      if (!variant) return;
       setItems(current => {
         const found = current.find(item => item.product.slug === product.slug && item.weight === weight);
         return found
-          ? current.map(item => item === found ? { ...item, quantity: item.quantity + quantity } : item)
-          : [...current, { product, weight, quantity, price }];
+          ? current.map(item => item === found ? { ...item, variant_id: variant.id, price: variant.price, quantity: item.quantity + quantity } : item)
+          : [...current, { product, variant_id: variant.id, weight, quantity, price: variant.price }];
       });
       setNotice({
         id: Date.now(),

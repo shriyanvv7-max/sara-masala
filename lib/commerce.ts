@@ -1,2 +1,3 @@
-export const shippingConfig = { flatFee: 60, freeShippingThreshold: 799, currency: "INR" } as const;
+function configuredAmount(value: string | undefined, fallback: number) { const number = value === undefined ? fallback : Number(value); if (!Number.isFinite(number) || number < 0) throw new Error("Invalid shipping configuration"); return Math.round(number * 100) / 100; }
+export const shippingConfig = { flatFee: configuredAmount(process.env.SHIPPING_FEE_INR, 60), freeShippingThreshold: configuredAmount(process.env.FREE_SHIPPING_THRESHOLD_INR, 799), currency: "INR" } as const;
 export const calculateShipping = (subtotal: number) => subtotal >= shippingConfig.freeShippingThreshold ? 0 : shippingConfig.flatFee;
