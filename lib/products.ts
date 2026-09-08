@@ -27,6 +27,7 @@ export interface Product {
   storage: string;
   featured: boolean;
   best_seller: boolean;
+  archived: boolean;
   image: string | null;
   category: Category;
   variants: ProductVariant[];
@@ -59,6 +60,7 @@ function mapProduct(row: any, index = 0): Product {
     storage: row.storage,
     featured: row.featured,
     best_seller: row.best_seller,
+    archived: row.archived,
     image: row.image,
     category: row.categories,
     variants,
@@ -68,7 +70,7 @@ function mapProduct(row: any, index = 0): Product {
 
 export async function getProducts() {
   const db = await createClient();
-  const { data, error } = await db.from("products").select(productSelect).order("name");
+  const { data, error } = await db.from("products").select(productSelect).eq("archived", false).order("name");
   if (error) {
     console.error("Failed to load products:", error.code, error.message);
     throw new Error("Unable to load products.");
@@ -78,14 +80,14 @@ export async function getProducts() {
 
 export async function getProduct(slug: string) {
   const db = await createClient();
-  const { data, error } = await db.from("products").select(productSelect).eq("slug", slug).single();
+  const { data, error } = await db.from("products").select(productSelect).eq("slug", slug).eq("archived", false).single();
   if (error || !data) return null;
   return mapProduct(data);
 }
 
 export async function getFeaturedProducts() {
   const db = await createClient();
-  const { data, error } = await db.from("products").select(productSelect).eq("featured", true).limit(4);
+  const { data, error } = await db.from("products").select(productSelect).eq("archived", false).eq("featured", true).limit(4);
   if (error) {
     console.error("Failed to load featured products:", error.code, error.message);
     throw new Error("Unable to load featured products.");
@@ -98,6 +100,7 @@ export async function getRelatedProducts(categoryId: string, excludeId: string) 
   const { data, error } = await db
     .from("products")
     .select(productSelect)
+    .eq("archived", false)
     .eq("category_id", categoryId)
     .neq("id", excludeId)
     .limit(4);

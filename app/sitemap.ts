@@ -14,7 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
   let productSlugs: string[] = [];
   try {
-    const { data, error } = await supabaseAdmin().from("products").select("slug,product_variants!inner(active)").eq("product_variants.active", true).order("slug");
+    const { data, error } = await supabaseAdmin().from("products").select("slug,product_variants!inner(active)").eq("archived", false).eq("product_variants.active", true).order("slug");
     if (error) throw error;
     productSlugs = (data || []).map(product => product.slug);
   } catch (error) {

@@ -1,2 +1,21 @@
-import { notFound } from "next/navigation"; import Link from "next/link"; import { requireAdmin } from "../../../../lib/admin-auth"; import { ProductForm } from "../../../../components/admin/product-form";
-export default async function EditProduct({params}:{params:Promise<{id:string}>}){const {db}=await requireAdmin();const id=(await params).id;const [{data:product},{data:categories}]=await Promise.all([db.from("products").select("*,product_variants(*)").eq("id",id).single(),db.from("categories").select("id,name").order("name")]);if(!product)notFound();return <main className="admin"><Link href="/admin/products">← Products</Link><p className="eyebrow">CATALOGUE</p><h1>Edit product</h1><ProductForm categories={categories||[]} initial={product}/></main>}
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { requireAdmin } from "../../../../lib/admin-auth";
+import { ProductForm } from "../../../../components/admin/product-form";
+
+export default async function EditProduct({ params }: { params: Promise<{ id: string }> }) {
+  const { db } = await requireAdmin();
+  const id = (await params).id;
+  const [{ data: product }, { data: categories }] = await Promise.all([
+    db.from("products").select("*,product_variants(*)").eq("id", id).single(),
+    db.from("categories").select("id,name").order("name"),
+  ]);
+  if (!product) notFound();
+  const variantIds = (product.product_variants || []).map((variant: { id: string }) => variant.id);
+  let hasOrderHistory = false;
+  if (variantIds.length) {
+    const { count } = await db.from("order_items").select("id", { count: "exact", head: true }).in("variant_id", variantIds);
+    hasOrderHistory = (count || 0) > 0;
+  }
+  return <main className="admin"><Link href="/admin/products">← Products</Link><p className="eyebrow">CATALOGUE</p><h1>Edit product</h1><ProductForm categories={categories || []} initial={product} hasOrderHistory={hasOrderHistory} /></main>;
+}

@@ -11,10 +11,11 @@ const schema = z.object({ product: productSchema, variants: z.array(variantSchem
 type Values = z.infer<typeof schema>;
 type Category = { id: string; name: string };
 
-export function ProductForm({ categories, initial }: { categories: Category[]; initial?: any }) {
+export function ProductForm({ categories, initial, hasOrderHistory = false }: { categories: Category[]; initial?: any; hasOrderHistory?: boolean }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [changingArchiveState, setChangingArchiveState] = useState(false);
   const [removingImage, setRemovingImage] = useState(false);
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -77,7 +78,28 @@ export function ProductForm({ categories, initial }: { categories: Category[]; i
   }
 
   async function deleteVariant(id: string, index: number) { if (!confirm("Delete this variant?")) return; const response = await fetch(`/api/product-variants/${id}`, { method: "DELETE" }); if (response.ok) remove(index); else setMessage("Unable to delete this variant."); }
-  async function deleteProduct() { if (!initial?.id || !confirm("Delete this product and all its variants?")) return; const response = await fetch(`/api/products/${initial.id}`, { method: "DELETE" }); if (response.ok) { router.push("/admin/products"); router.refresh(); } else setMessage("Unable to delete this product."); }
+  async function deleteProduct() {
+    if (!initial?.id || !confirm("Delete this product and all its variants?")) return;
+    const response = await fetch(`/api/products/${initial.id}`, { method: "DELETE" });
+    const json = await response.json().catch(() => null);
+    if (response.ok) { router.push("/admin/products"); router.refresh(); }
+    else setMessage(json?.error || "Unable to delete this product.");
+  }
+
+  async function changeArchiveState(action: "archive" | "restore") {
+    const verb = action === "archive" ? "Archive" : "Restore";
+    if (!initial?.id || !confirm(`${verb} this product?`)) return;
+    setChangingArchiveState(true); setMessage("");
+    try {
+      const response = await fetch(`/api/products/${initial.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+      const json = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(json?.error || `Unable to ${action} product.`);
+      if (action === "archive") router.push("/admin/products?filter=archived");
+      else setMessage("Product restored. Choose which variants should be active, then save changes.");
+      router.refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : `Unable to ${action} product.`); }
+    finally { setChangingArchiveState(false); }
+  }
 
   return <form className="admin-form" onSubmit={form.handleSubmit(submit)}>
     <section><h2>Product details</h2>
@@ -86,9 +108,10 @@ export function ProductForm({ categories, initial }: { categories: Category[]; i
       <textarea placeholder="Description" {...form.register("product.description")}/><textarea placeholder="Ingredients" {...form.register("product.ingredients")}/><textarea placeholder="Storage instructions" {...form.register("product.storage")}/>
       <label>Product image<input type="file" accept="image/*" onChange={event => event.target.files?.[0] && upload(event.target.files[0]).catch(() => setMessage("Image upload failed. Please try again."))}/></label>
       {image && <div className="admin-image-actions"><img className="admin-image" src={image} alt="Product preview"/><button type="button" className="admin-remove-image" onClick={removeImage} disabled={removingImage}>{removingImage ? "Removing..." : "Remove image"}</button></div>}
-      <label><input type="checkbox" {...form.register("product.featured")}/> Featured product</label><label><input type="checkbox" {...form.register("product.best_seller")}/> Best seller</label>
+      <label><input type="checkbox" disabled={initial?.archived} {...form.register("product.featured")}/> Featured product</label><label><input type="checkbox" disabled={initial?.archived} {...form.register("product.best_seller")}/> Best seller</label>
     </section>
-    <section><h2>Weight variants</h2>{fields.map((field, index) => <div className="variant-row" key={field.id}><input placeholder="Weight" {...form.register(`variants.${index}.weight`)}/><input type="number" placeholder="Selling price" {...form.register(`variants.${index}.price`)}/><input type="number" placeholder="MRP" {...form.register(`variants.${index}.mrp`)}/><input type="number" placeholder="Stock" {...form.register(`variants.${index}.stock`)}/><input placeholder="SKU" {...form.register(`variants.${index}.sku`)}/><button type="button" onClick={() => field.id && initial?.product_variants?.[index]?.id ? deleteVariant(initial.product_variants[index].id, index) : remove(index)}>Remove</button></div>)}<button type="button" className="secondary admin-add" onClick={() => append({ weight: "", price: 0, mrp: 0, stock: 0, sku: "", active: true })}>Add variant</button></section>
-    {message && <p role="alert">{message}</p>}<button className="add-cart" disabled={saving}>{saving ? "Saving..." : "Save changes"}</button>{initial && <button type="button" className="admin-delete" onClick={deleteProduct}>Delete product</button>}
+    <section><h2>Weight variants</h2>{fields.map((field, index) => <div className="variant-row" key={field.id}><input placeholder="Weight" {...form.register(`variants.${index}.weight`)}/><input type="number" placeholder="Selling price" {...form.register(`variants.${index}.price`)}/><input type="number" placeholder="MRP" {...form.register(`variants.${index}.mrp`)}/><input type="number" placeholder="Stock" {...form.register(`variants.${index}.stock`)}/><input placeholder="SKU" {...form.register(`variants.${index}.sku`)}/><label><input type="checkbox" disabled={initial?.archived} {...form.register(`variants.${index}.active`)}/> Active</label><button type="button" onClick={() => field.id && initial?.product_variants?.[index]?.id ? deleteVariant(initial.product_variants[index].id, index) : remove(index)}>Remove</button></div>)}<button type="button" className="secondary admin-add" onClick={() => append({ weight: "", price: 0, mrp: 0, stock: 0, sku: "", active: true })}>Add variant</button></section>
+    {hasOrderHistory && <p className="order-state-alert">This product has order history and cannot be permanently deleted.</p>}
+    {message && <p role="alert">{message}</p>}<button type="submit" className="add-cart" disabled={saving || changingArchiveState}>{saving ? "Saving..." : "Save changes"}</button>{initial && (initial.archived ? <button type="button" className="admin-delete" disabled={changingArchiveState} onClick={() => changeArchiveState("restore")}>{changingArchiveState ? "Restoring..." : "Restore product"}</button> : hasOrderHistory ? <button type="button" className="admin-delete" disabled={changingArchiveState} onClick={() => changeArchiveState("archive")}>{changingArchiveState ? "Archiving..." : "Archive product"}</button> : <button type="button" className="admin-delete" onClick={deleteProduct}>Delete product</button>)}
   </form>;
 }
