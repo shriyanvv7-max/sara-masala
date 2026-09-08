@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "../../../lib/supabase/admin";
 export const dynamic = "force-dynamic";
-export const metadata = { robots: { index: false, follow: false }, referrer: "no-referrer" as const };
+export const metadata = { title: "Order confirmation", description: "View your Sara Masala order status.", alternates: { canonical: null }, robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 export default async function Confirmation({ params, searchParams }: { params: Promise<{ orderNumber: string }>; searchParams: Promise<{ token?: string }> }) {
   const { orderNumber } = await params; const { token } = await searchParams;
   if (!token || !/^[a-f0-9-]{36}$/i.test(token)) notFound();
