@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test:post-payment": "node --import tsx --test tests/post-payment.test.ts",
-    "test:order-lifecycle": "node --import tsx --test tests/order-lifecycle.test.ts"
+    "test:order-lifecycle": "node --import tsx --test tests/order-lifecycle.test.ts",
+    "test:checkout-resume": "node --import tsx --test tests/checkout-resume.test.ts",
+    "test:payment-security": "node --test tests/payment-security.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
