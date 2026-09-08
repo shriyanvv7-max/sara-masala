@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { paymentAdmin, paymentError } from "../../../../../../lib/payment-security";
 import { supabaseAdmin } from "../../../../../../lib/supabase/admin";
 import { getRazorpay } from "../../../../../../lib/razorpay";
+import { sendRefundEmail } from "../../../../../../lib/order-notifications";
 export const runtime = "nodejs";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await paymentAdmin(); if (!admin) return paymentError(403, "Admin access required.");
@@ -20,6 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const refund = await razorpay.payments.refund(order.razorpay_payment_id, { amount: Math.round(Number(order.total) * 100), notes: { internal_order_id: order.id, request_id: order.refund_request_id } });
     const { error: saveError } = await db.from("orders").update({ razorpay_refund_id: refund.id, refund_status: refund.status }).eq("id", order.id).neq("refund_status", "processed");
     if (saveError) throw saveError;
+    if (refund.status === "processed") await sendRefundEmail(order.id, refund.id, Number(refund.amount));
     return NextResponse.json({ refundId: refund.id, status: refund.status });
   } catch { console.error("[payment:refund] Requires reconciliation before any retry"); return paymentError(502, "Refund outcome needs review. Check Razorpay before attempting another refund."); }
 }

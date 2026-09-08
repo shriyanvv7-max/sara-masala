@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:post-payment": "node --import tsx --test tests/post-payment.test.ts",
+    "test:order-lifecycle": "node --import tsx --test tests/order-lifecycle.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
@@ -19,6 +21,7 @@
     "framer-motion": "11.15.0",
     "lucide-react": "0.468.0",
     "next": "^15.1.11",
+    "pdf-lib": "^1.17.1",
     "razorpay": "2.9.4",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -27,8 +30,10 @@
     "zod": "3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "autoprefixer": "10.4.20",
     "postcss": "8.4.49",
-    "tailwindcss": "3.4.17"
+    "tailwindcss": "3.4.17",
+    "tsx": "^4.20.5"
   }
 }
