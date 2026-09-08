@@ -7,8 +7,11 @@ import { getRazorpay, getRazorpayConfig } from "../../../../../lib/razorpay";
 import { supabaseAdmin } from "../../../../../lib/supabase/admin";
 import { paymentError } from "../../../../../lib/payment-security";
 import { canReusePendingOrder, isPendingOrderExpired } from "../../../../../lib/order-lifecycle";
+import { rateLimit } from "../../../../../lib/rate-limit";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
+  const limited = await rateLimit(request, { bucket: "payment-create", limit: 20, windowSeconds: 600 });
+  if (limited) return limited;
   const parsed = checkoutSchema.extend({ requestId: z.string().uuid() }).safeParse(await request.json().catch(() => null));
   if (!parsed.success) return paymentError(400, "Please check your checkout details and cart.");
   const input = parsed.data;
@@ -73,8 +76,6 @@ export async function POST(request: Request) {
       console.error("[payment:create] prepare_razorpay_order failed", {
         code: prepareError.code,
         message: prepareError.message,
-        details: prepareError.details,
-        hint: prepareError.hint,
       });
 
       return paymentError(409, "Prices or availability changed. Please refresh your cart and retry.");

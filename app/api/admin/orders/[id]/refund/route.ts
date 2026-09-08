@@ -5,9 +5,12 @@ import { paymentAdmin, paymentError } from "../../../../../../lib/payment-securi
 import { supabaseAdmin } from "../../../../../../lib/supabase/admin";
 import { getRazorpay } from "../../../../../../lib/razorpay";
 import { sendRefundEmail } from "../../../../../../lib/order-notifications";
+import { rateLimit } from "../../../../../../lib/rate-limit";
 export const runtime = "nodejs";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await paymentAdmin(); if (!admin) return paymentError(403, "Admin access required.");
+  const limited = await rateLimit(request, { bucket: "admin-refund", limit: 10, windowSeconds: 3600, identity: admin.id });
+  if (limited) return limited;
   const input = z.object({ reason: z.string().trim().min(5).max(500), confirmFullRefund: z.literal(true) }).strict().safeParse(await request.json().catch(() => null));
   const id = z.string().uuid().safeParse((await params).id);
   if (!input.success || !id.success) return paymentError(400, "Confirm the full refund and provide a reason.");

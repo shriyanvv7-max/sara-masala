@@ -1,2 +1,7 @@
-import { NextResponse } from "next/server"; import { createClient } from "../../../lib/supabase/server"; import { orderSchema } from "../../../lib/validations";
-export async function POST(request:Request){const parsed=orderSchema.safeParse(await request.json());if(!parsed.success)return NextResponse.json({error:parsed.error.flatten()},{status:400});const db=await createClient();const {data:{user}}=await db.auth.getUser();if(!user)return NextResponse.json({error:"Please sign in before placing an order."},{status:401});const {data:variants,error:variantError}=await db.from("product_variants").select("id,price,stock").in("id",parsed.data.items.map(i=>i.variant_id));if(variantError||!variants)return NextResponse.json({error:"Could not verify stock"},{status:500});const subtotal=parsed.data.items.reduce((sum,item)=>sum+(variants.find(v=>v.id===item.variant_id)?.price||0)*item.quantity,0);const {data:order,error}=await db.from("orders").insert({customer_id:user.id,subtotal,shipping:0,discount:0,total:subtotal,payment_method:"cod"}).select().single();if(error)return NextResponse.json({error:error.message},{status:500});const {error:itemError}=await db.from("order_items").insert(parsed.data.items.map(i=>({...i,order_id:order.id,price:variants.find(v=>v.id===i.variant_id)?.price})));return NextResponse.json(itemError?{error:itemError.message}:{order},{status:itemError?400:201})}
+import { NextResponse } from "next/server";
+
+// Cash-on-delivery is not an active checkout method. Keeping this legacy endpoint
+// write-free prevents clients from bypassing the verified Razorpay order workflow.
+export async function POST() {
+  return NextResponse.json({ error: "This order method is unavailable." }, { status: 405, headers: { "Cache-Control": "no-store" } });
+}

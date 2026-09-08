@@ -5,14 +5,16 @@ import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { getRazorpay } from "../../../../lib/razorpay";
 import { sendPaidOrderEmails, sendRefundEmail } from "../../../../lib/order-notifications";
 export const runtime = "nodejs";
-const envelope = z.object({ event: z.string(), payload: z.record(z.any()) });
+const envelope = z.object({ event: z.string().max(100), payload: z.record(z.any()) }).passthrough();
 export async function POST(request: Request) {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
   if (!secret) return paymentError();
+  if (Number(request.headers.get("content-length") || 0) > 1_000_000) return paymentError(413, "Webhook payload is too large.");
   const raw = await request.text();
+  if (Buffer.byteLength(raw, "utf8") > 1_000_000) return paymentError(413, "Webhook payload is too large.");
   if (!validSignature(raw, request.headers.get("x-razorpay-signature") || "", secret)) return paymentError(400, "Invalid signature.");
   const eventId = request.headers.get("x-razorpay-event-id");
-  if (!eventId || eventId.length > 200) return paymentError(400, "Invalid event ID.");
+  if (!eventId || !/^[A-Za-z0-9_.:-]{1,200}$/.test(eventId)) return paymentError(400, "Invalid event ID.");
   let input; try { input = envelope.parse(JSON.parse(raw)); } catch { return paymentError(400, "Invalid event."); }
   const supported = ["payment.captured", "order.paid", "payment.failed", "refund.processed"];
   if (!supported.includes(input.event)) return NextResponse.json({ ok: true, ignored: true });

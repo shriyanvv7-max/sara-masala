@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "../lib/seo";
-import { supabaseAdmin } from "../lib/supabase/admin";
+import { getProducts } from "../lib/products";
 
 export const revalidate = 3600;
 
@@ -14,9 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
   let productSlugs: string[] = [];
   try {
-    const { data, error } = await supabaseAdmin().from("products").select("slug,product_variants!inner(active)").eq("archived", false).eq("product_variants.active", true).order("slug");
-    if (error) throw error;
-    productSlugs = (data || []).map(product => product.slug);
+    productSlugs = (await getProducts()).filter(product => product.variants.length > 0).map(product => product.slug);
   } catch (error) {
     console.error("[sitemap] Product URLs could not be loaded; returning the static storefront sitemap.", error instanceof Error ? error.message : "Unknown error");
   }

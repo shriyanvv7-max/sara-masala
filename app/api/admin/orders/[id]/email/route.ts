@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { paymentAdmin, paymentError } from "../../../../../../lib/payment-security";
 import { getOrderRecord, resendConfirmationEmail, sendFulfilmentEmail, sendRefundEmail } from "../../../../../../lib/order-notifications";
+import { rateLimit } from "../../../../../../lib/rate-limit";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!await paymentAdmin()) return paymentError(403, "Admin access required.");
+  const admin = await paymentAdmin(); if (!admin) return paymentError(403, "Admin access required.");
+  const limited = await rateLimit(request, { bucket: "admin-email", limit: 30, windowSeconds: 3600, identity: admin.id });
+  if (limited) return limited;
   const id = z.string().uuid().safeParse((await params).id); if (!id.success) return paymentError(400, "Invalid order.");
-  const input = z.object({ kind: z.enum(["confirmation", "status", "refund"]).default("confirmation") }).safeParse(await request.json().catch(() => ({})));
+  const input = z.object({ kind: z.enum(["confirmation", "status", "refund"]).default("confirmation") }).strict().safeParse(await request.json().catch(() => ({})));
   if (!input.success) return paymentError(400, "Invalid email request.");
   try {
     const order = await getOrderRecord(id.data);

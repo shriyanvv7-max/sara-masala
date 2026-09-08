@@ -1,5 +1,6 @@
 import "server-only";
-import { createClient } from "./supabase/server";
+import { unstable_cache } from "next/cache";
+import { supabasePublic } from "./supabase/public";
 
 export interface Category {
   id: string;
@@ -68,42 +69,26 @@ function mapProduct(row: any, index = 0): Product {
   };
 }
 
-export async function getProducts() {
-  const db = await createClient();
+const loadProducts = unstable_cache(async () => {
+  const db = supabasePublic();
   const { data, error } = await db.from("products").select(productSelect).eq("archived", false).order("name");
   if (error) {
     console.error("Failed to load products:", error.code, error.message);
     throw new Error("Unable to load products.");
   }
   return (data || []).map(mapProduct);
-}
+}, ["public-product-catalog-v1"], { revalidate: 300, tags: ["product-catalog"] });
+
+export async function getProducts() { return loadProducts(); }
 
 export async function getProduct(slug: string) {
-  const db = await createClient();
-  const { data, error } = await db.from("products").select(productSelect).eq("slug", slug).eq("archived", false).single();
-  if (error || !data) return null;
-  return mapProduct(data);
+  return (await loadProducts()).find(product => product.slug === slug) || null;
 }
 
 export async function getFeaturedProducts() {
-  const db = await createClient();
-  const { data, error } = await db.from("products").select(productSelect).eq("archived", false).eq("featured", true).limit(4);
-  if (error) {
-    console.error("Failed to load featured products:", error.code, error.message);
-    throw new Error("Unable to load featured products.");
-  }
-  return (data || []).map(mapProduct);
+  return (await loadProducts()).filter(product => product.featured).slice(0, 4);
 }
 
 export async function getRelatedProducts(categoryId: string, excludeId: string) {
-  const db = await createClient();
-  const { data, error } = await db
-    .from("products")
-    .select(productSelect)
-    .eq("archived", false)
-    .eq("category_id", categoryId)
-    .neq("id", excludeId)
-    .limit(4);
-  if (error) return [];
-  return (data || []).map(mapProduct);
+  return (await loadProducts()).filter(product => product.category.id === categoryId && product.id !== excludeId).slice(0, 4);
 }

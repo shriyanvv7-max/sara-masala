@@ -4,9 +4,12 @@ import { getRazorpay, getRazorpayConfig } from "../../../../../lib/razorpay";
 import { supabaseAdmin } from "../../../../../lib/supabase/admin";
 import { validSignature, paymentError } from "../../../../../lib/payment-security";
 import { sendPaidOrderEmails } from "../../../../../lib/order-notifications";
+import { rateLimit } from "../../../../../lib/rate-limit";
 export const runtime = "nodejs";
-const schema = z.object({ internalOrderId: z.string().uuid(), razorpay_order_id: z.string().min(1), razorpay_payment_id: z.string().min(1), razorpay_signature: z.string().regex(/^[a-f0-9]{64}$/i) });
+const schema = z.object({ internalOrderId: z.string().uuid(), razorpay_order_id: z.string().regex(/^order_[A-Za-z0-9]{5,100}$/), razorpay_payment_id: z.string().regex(/^pay_[A-Za-z0-9]{5,100}$/), razorpay_signature: z.string().regex(/^[a-f0-9]{64}$/i) }).strict();
 export async function POST(request: Request) {
+  const limited = await rateLimit(request, { bucket: "payment-verify", limit: 30, windowSeconds: 600 });
+  if (limited) return limited;
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return paymentError(400, "Invalid payment response.");
   try {

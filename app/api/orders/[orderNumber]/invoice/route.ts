@@ -5,9 +5,12 @@ import type { OrderRecord } from "../../../../../lib/order-notifications";
 import { createClient } from "../../../../../lib/supabase/server";
 import { supabaseAdmin } from "../../../../../lib/supabase/admin";
 import { canAccessInvoice } from "../../../../../lib/invoice-access";
+import { rateLimit } from "../../../../../lib/rate-limit";
 export const runtime = "nodejs";
 
 export async function GET(request: Request, { params }: { params: Promise<{ orderNumber: string }> }) {
+  const limited = await rateLimit(request, { bucket: "invoice-download", limit: 60, windowSeconds: 600 });
+  if (limited) return limited;
   const orderNumber = z.string().regex(/^SM-[A-Z0-9-]{4,80}$/i).safeParse((await params).orderNumber);
   if (!orderNumber.success) return new NextResponse("Not found", { status: 404 });
   const { data } = await supabaseAdmin().from("orders").select("*,order_items(product_name,weight,quantity,unit_price,line_total)").eq("order_number", orderNumber.data).single();

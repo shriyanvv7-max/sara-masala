@@ -4,8 +4,12 @@ import { paymentAdmin, paymentError } from "../../../../../lib/payment-security"
 import { supabaseAdmin } from "../../../../../lib/supabase/admin";
 import { sendFulfilmentEmail } from "../../../../../lib/order-notifications";
 import { canFulfilOrder } from "../../../../../lib/order-lifecycle";
+import { rateLimit } from "../../../../../lib/rate-limit";
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!await paymentAdmin()) return paymentError(403, "Admin access required.");
+  const admin = await paymentAdmin();
+  if (!admin) return paymentError(403, "Admin access required.");
+  const limited = await rateLimit(request, { bucket: "admin-order-status", limit: 120, windowSeconds: 3600, identity: admin.id });
+  if (limited) return limited;
   const body = z.object({ status: z.enum(["confirmed", "packed", "shipped", "out_for_delivery", "delivered", "cancelled"]) }).strict().safeParse(await request.json().catch(() => null));
   const id = z.string().uuid().safeParse((await params).id);
   if (!body.success || !id.success) return paymentError(400, "Invalid status.");

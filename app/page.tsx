@@ -9,4 +9,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
+// Render against the cached catalogue at request time. This keeps deployments
+// independent of Supabase availability while getFeaturedProducts retains ISR.
+export const dynamic = "force-dynamic";
+
 export default async function Page() { return <HomePage featuredProducts={await getFeaturedProducts()} />; }

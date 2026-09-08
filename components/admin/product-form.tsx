@@ -68,7 +68,8 @@ export function ProductForm({ categories, initial, hasOrderHistory = false }: { 
         const response = await fetch(`/api/products/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values.product) });
         if (!response.ok) throw new Error();
         for (const variant of values.variants) {
-          const response = await fetch(variant.id ? `/api/product-variants/${variant.id}` : "/api/product-variants", { method: variant.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(variant.id ? variant : { product_id: id, variant }) });
+          const { id: variantId, ...variantData } = variant;
+          const response = await fetch(variantId ? `/api/product-variants/${variantId}` : "/api/product-variants", { method: variantId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(variantId ? variantData : { product_id: id, variant: variantData }) });
           if (!response.ok) throw new Error();
         }
       }
